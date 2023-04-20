@@ -2,7 +2,7 @@
 #include <navigation/navigation.hpp>
 #include <iostream>
 
-//rclcpp::Node::SharedPtr nodeh;
+rclcpp::Node::SharedPtr nodeh;
 
 // Callback function 
 void stringCallback(const nav_msgs::msg::OccupancyGrid::SharedPtr msg) {
