@@ -2,7 +2,13 @@
 #include <navigation/navigation.hpp>
 #include <iostream>
 
+//rclcpp::Node::SharedPtr nodeh;
 
+// Callback function 
+void stringCallback(const nav_msgs::msg::OccupancyGrid::SharedPtr msg) {
+   print received string to the screen
+  RCLCPP_INFO(nodeh->get_logger(),"Map Data: %s",msg->data);
+}
 
 int main(int argc,char **argv) {
  
@@ -38,12 +44,26 @@ int main(int argc,char **argv) {
   	goal_pos->orientation.w = 1;
   	// move to new pose
   	navigator.GoToPose(goal_pos);
-  	while ( ! navigator.IsTaskComplete() ) {
-  	  	
-  	}
+  	while ( ! navigator.IsTaskComplete() ) {}
   	
   	// Increment arr_index
   	arr_index++;
+  	
+  	// Subscribe to the laser data
+  	rclcpp::Subscription<nav_msgs::msg::OccupancyGrid>::SharedPtr laser_sub;
+  	
+  	// Create instance of a node
+  	nodeh = rclcpp::Node::make_shared("mapVals");
+  	
+	// subscribe to topic "stringm" an register the callback function
+	laser_sub = nodeh->create_subscription<nav_msgs::msg::OccupancyGrid>
+                                        ("mapVals",10,&stringCallback);
+                                         
+        rclcpp::spin(nodeh); // wait for messages and process them
+  	
+  	// backup of 0.15 m (deafult distance)
+  	navigator.Backup();
+  	while ( ! navigator.IsTaskComplete() ) {}
    }
    
   float arr_loc_x_two[] = {-0.5, 0.5, 0.5, -0.5};
@@ -60,14 +80,23 @@ int main(int argc,char **argv) {
   	goal_pos->orientation.w = 1;
   	// move to new pose
   	navigator.GoToPose(goal_pos);
-  	while ( ! navigator.IsTaskComplete() ) {
-  	  	
-  	}
+  	while ( ! navigator.IsTaskComplete() ) {}
   	
   	// Increment arr_index
   	arr_index++;
+  	
+  	
+  	// backup of 0.15 m (deafult distance)
+  	navigator.Backup();
+  	while ( ! navigator.IsTaskComplete() ) {}
    }
   // complete here....
+  
+  //MRTP CH7 has the laser scan info
+  // Use Global cost map, it will show abnormalities on the map
+  // Type is mav_msgs/msg/Ocupancy grid
+  // Check the array then check the next instance and look for differences, move toward the differences till we're at the pole
+  // Next goal is to get map data and analyze it for differences
   
   rclcpp::shutdown(); // shutdown ROS
   return 0;
