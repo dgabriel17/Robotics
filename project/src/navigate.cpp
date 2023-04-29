@@ -57,7 +57,7 @@ int main(int argc,char **argv) {
                                         ("mapVals",10,&callback);
                                         
    //subscriber to MAP
-   auto sub = nodeh->create_subscription<nav_msgs::msg::OccupancyGrid>("global_costmap", 10, &mapCallback);
+   auto sub = nodeh->create_subscription<nav_msgs::msg::OccupancyGrid>("mapVals", 10, &mapCallback);
 
   // first: it is mandatory to initialize the pose of the robot
   geometry_msgs::msg::Pose::SharedPtr init = std::make_shared<geometry_msgs::msg::Pose>();
