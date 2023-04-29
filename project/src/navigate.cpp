@@ -21,6 +21,7 @@ void callback(const nav_msgs::msg::OccupancyGrid::SharedPtr msg) {
 void mapCallback(const nav_msgs::msg::OccupancyGrid::SharedPtr msg) {
   // loop through the map.......................
   int x,y,diff, arrLoc;
+  RCLCPP_INFO(nodeh->get_logger(), "Looking Around");
   for (int w = 0; w < msg->info.height; ++w){
   		for ( int h=0; h < msg->info.height; h++){
   			// find x/y for the big map
@@ -35,6 +36,7 @@ void mapCallback(const nav_msgs::msg::OccupancyGrid::SharedPtr msg) {
 			}  			
   			
   		}
+  		  RCLCPP_INFO(nodeh->get_logger(), "Moving on");
    }
 }
 
@@ -91,12 +93,12 @@ int main(int argc,char **argv) {
   	// Increment arr_index
   	arr_index++;
   	
+  	RCLCPP_INFO(nodeh->get_logger(), "Spinning");
     // wait for messages and process them                
-    rclcpp::spin(nodeh); 
-  	
-  	// backup of 0.15 m (deafult distance)
-  	navigator.Backup();
+    //rclcpp::spin(nodeh); 
+    
   	while ( ! navigator.IsTaskComplete() ) {}
+  	RCLCPP_INFO(nodeh->get_logger(), "First Iteration Done");
    }
    
    
