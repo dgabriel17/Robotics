@@ -8,6 +8,7 @@ nav_msgs::msg::OccupancyGrid::SharedPtr first_map;
 
 // Callback function 
 void callback(const nav_msgs::msg::OccupancyGrid::SharedPtr msg) {
+	RCLCPP_INFO(nodeh->get_logger(), "In first Callback function----------------");
    //print received string to the screen
    if (first){ //if first time get original map
 	   first_map = msg;
@@ -21,9 +22,9 @@ void callback(const nav_msgs::msg::OccupancyGrid::SharedPtr msg) {
 void mapCallback(const nav_msgs::msg::OccupancyGrid::SharedPtr msg) {
   // loop through the map.......................
   int x,y,diff, arrLoc;
-  RCLCPP_INFO(nodeh->get_logger(), "Looking Around");
-  for (int w = 0; w < msg->info.height; ++w){
-  		for ( int h=0; h < msg->info.height; h++){
+  RCLCPP_INFO(nodeh->get_logger(), "Looking Around ---------------------------");
+  for (unsigned int w = 0; w < msg->info.height; ++w){
+  		for (unsigned int h=0; h < msg->info.height; h++){
   			// find x/y for the big map
   			x = (w* msg->info.resolution)+ (msg->info.resolution /2) - 10 ;
   			y = (h* msg->info.resolution) + ( msg->info.resolution /2 ) - 10;
@@ -52,12 +53,12 @@ int main(int argc,char **argv) {
   // Subscribe to the laser data
   rclcpp::Subscription<nav_msgs::msg::OccupancyGrid>::SharedPtr laser_sub;
   	
-  // subscribe to topic "stringm" an register the callback function
+  // subscribe to topic "mapVals" an register the callback function
   laser_sub = nodeh->create_subscription<nav_msgs::msg::OccupancyGrid>
-                                        ("mapVals",10,&callback);
+                                        ("mapVals",1000,&callback);
                                         
    //subscriber to MAP
-   auto sub = nodeh->create_subscription<nav_msgs::msg::OccupancyGrid>("mapVals", 10, &mapCallback);
+   auto sub = nodeh->create_subscription<nav_msgs::msg::OccupancyGrid>("mapVals", 1000, &mapCallback);
 
   // first: it is mandatory to initialize the pose of the robot
   geometry_msgs::msg::Pose::SharedPtr init = std::make_shared<geometry_msgs::msg::Pose>();
@@ -93,14 +94,15 @@ int main(int argc,char **argv) {
   	// Increment arr_index
   	arr_index++;
   	
-  	RCLCPP_INFO(nodeh->get_logger(), "Spinning");
     // wait for messages and process them                
-    //rclcpp::spin(nodeh); 
+    rclcpp::spin_some(nodeh); 
     
-  	while ( ! navigator.IsTaskComplete() ) {}
-  	RCLCPP_INFO(nodeh->get_logger(), "First Iteration Done");
-   }
+  	while ( ! navigator.IsTaskComplete() ){
+  	}
+
+   }  
    
+   RCLCPP_INFO(nodeh->get_logger(), "---------Done with first loop---------");
    
   float arr_loc_x_two[] = {-0.5, 0.5, 0.5, -0.5};
   float arr_loc_y_two[] = {0.5, 0.5, -0.5, -0.5};
@@ -121,10 +123,10 @@ int main(int argc,char **argv) {
   	// Increment arr_index
   	arr_index++;
   	
+  	while ( ! navigator.IsTaskComplete() )  {
+  		rclcpp::spin_some(nodeh);
+  	}
   	
-  	// backup of 0.15 m (deafult distance)
-  	navigator.Backup();
-  	while ( ! navigator.IsTaskComplete() ) {}
    }
    
 
