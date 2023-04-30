@@ -24,7 +24,7 @@ void mapCallback(const nav_msgs::msg::OccupancyGrid::SharedPtr msg) {
     //  }
     //}
     int x,y,diff, arrLoc;
-    RCLCPP_INFO(nodeh->get_logger(), "Looking Around");
+    RCLCPP_INFO(mapNode->get_logger(), "Looking Around");
     for (int w = 0; w < msg->info.height; ++w){
   		for ( int h=0; h < msg->info.height; h++){
   			// find x/y for the big map
@@ -38,7 +38,7 @@ void mapCallback(const nav_msgs::msg::OccupancyGrid::SharedPtr msg) {
 				std::cout << "somethings fishy here" << x <<", " << y << std::endl;
 			  }  			
   		}
-  		  RCLCPP_INFO(nodeh->get_logger(), "Moving on");
+  		  RCLCPP_INFO(mapNode->get_logger(), "Moving on");
     }
   }
   
@@ -88,6 +88,10 @@ int main(int argc,char **argv) {
                                         
    //subscriber to MAP
    auto mapsub = mapNode->create_subscription<nav_msgs::msg::OccupancyGrid>("global_costmap", 10, &mapCallback);
+
+  //initialize map
+  rclcpp::spin_some(mapNode)
+
    auto map = mapNode->create_subscription<nav_msgs::msg::OccupancyGrid>("laserVals", 10, &mapCallback);
 
   // first: it is mandatory to initialize the pose of the robot
@@ -103,12 +107,6 @@ int main(int argc,char **argv) {
   while ( ! navigator.IsTaskComplete() ) {
     // busy waiting for task to be completed
   }
-
-  //initialize map
-  rclcpp::spin_some(mapNode)
-
-
-  geometry_msgs::msg::Pose::SharedPtr goal_pos = std::make_shared<geometry_msgs::msg::Pose>();
   
   float arr_loc_x[] = {-1, 0, 1, 1.5, 1.5, 1.5, 1, 0, -1, -2};
   float arr_loc_y[] = {-2, -2, -2, -1, 0, 1, 1.75, 2, 2, 0.5};
@@ -129,14 +127,14 @@ int main(int argc,char **argv) {
   	// Increment arr_index
   	arr_index++;
   	
-  	RCLCPP_INFO(nodeh->get_logger(), "Spinning");
+  	RCLCPP_INFO(mapNode->get_logger(), "Spinning");
     
     //After reaching new location spin laserNode to process scan data to map then spin mapNode to compare current map to first initialized
     rclcpp::spin_some(laserNode)
     rclcpp::spin_some(mapNode)
     
   	while ( ! navigator.IsTaskComplete() ) {}
-  	RCLCPP_INFO(nodeh->get_logger(), "First Iteration Done");
+  	RCLCPP_INFO(mapNode->get_logger(), "First Iteration Done");
    }
    
    
