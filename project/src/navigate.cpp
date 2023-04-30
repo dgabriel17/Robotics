@@ -48,17 +48,17 @@ int main(int argc,char **argv) {
   Navigator navigator(true,false); // create node with debug info but not verbose
   
   // Create instance of a node
-  nodeh = rclcpp::Node::make_shared("mapVals");
+  nodeh = rclcpp::Node::make_shared("navigate");
   
   // Subscribe to the laser data
   rclcpp::Subscription<nav_msgs::msg::OccupancyGrid>::SharedPtr laser_sub;
   	
   // subscribe to topic "mapVals" an register the callback function
   laser_sub = nodeh->create_subscription<nav_msgs::msg::OccupancyGrid>
-                                        ("mapVals",1000,&callback);
+                                        ("global_costmap/costmap",1000,&callback);
                                         
    //subscriber to MAP
-   auto sub = nodeh->create_subscription<nav_msgs::msg::OccupancyGrid>("mapVals", 1000, &mapCallback);
+   auto sub = nodeh->create_subscription<nav_msgs::msg::OccupancyGrid>("global_costmap/costmap", 1000, &mapCallback);
 
   // first: it is mandatory to initialize the pose of the robot
   geometry_msgs::msg::Pose::SharedPtr init = std::make_shared<geometry_msgs::msg::Pose>();
@@ -103,6 +103,7 @@ int main(int argc,char **argv) {
    }  
    
    RCLCPP_INFO(nodeh->get_logger(), "---------Done with first loop---------");
+   rclcpp::spin_some(nodeh); 
    
   float arr_loc_x_two[] = {-0.5, 0.5, 0.5, -0.5};
   float arr_loc_y_two[] = {0.5, 0.5, -0.5, -0.5};
@@ -131,7 +132,7 @@ int main(int argc,char **argv) {
    
 
 
-  
+  rclcpp::spin_some(nodeh); 
   //MRTP CH7 has the laser scan info
   // Use Global cost map, it will show abnormalities on the map
   // Type is mav_msgs/msg/Ocupancy grid
