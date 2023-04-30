@@ -2,43 +2,70 @@
 #include <navigation/navigation.hpp>
 #include <iostream>
 
-rclcpp::Node::SharedPtr nodeh;
+rclcpp::Node::SharedPtr mapNode;
+rclcpp::Node::SharedPtr laserNode;
 bool first = true;
 nav_msgs::msg::OccupancyGrid::SharedPtr first_map;
+nav_msgs::msg::OccupancyGrid::SharedPtr current_map;
+geometry_msgs::msg::Pose::SharedPtr goal_pos;
 
-// Callback function 
-void callback(const nav_msgs::msg::OccupancyGrid::SharedPtr msg) {
-   //print received string to the screen
-   if (first){ //if first time get original map
+// Callback function
+void mapCallback(const nav_msgs::msg::OccupancyGrid::SharedPtr msg) {
+  // loop through the map.......................
+  if (first){ //if first time get original map
 	   first_map = msg;
 	   first = false;
    }
-
-  RCLCPP_INFO(nodeh->get_logger(),"Map Data: %s",msg->data);
-}
-
-// Callback function for map
-void mapCallback(const nav_msgs::msg::OccupancyGrid::SharedPtr msg) {
-  // loop through the map.......................
-  int x,y,diff, arrLoc;
-  RCLCPP_INFO(nodeh->get_logger(), "Looking Around");
-  for (int w = 0; w < msg->info.height; ++w){
+  else{
+    //std::vector<int> indices;
+    //for (i = 0; i < msg.data.size(); i++){
+    //  if(first_map->data[i] != msg->data[i]){
+    //    indices.push_back(i);
+    //  }
+    //}
+    int x,y,diff, arrLoc;
+    RCLCPP_INFO(nodeh->get_logger(), "Looking Around");
+    for (int w = 0; w < msg->info.height; ++w){
   		for ( int h=0; h < msg->info.height; h++){
   			// find x/y for the big map
-  			x = (w* msg->info.resolution)+ (msg->info.resolution /2) - 10 ;
-  			y = (h* msg->info.resolution) + ( msg->info.resolution /2 ) - 10;
+  			x = (w* msg->info.resolution)+(msg->info.resolution /2) - 10 ;
+  			y = (h* msg->info.resolution)+(msg->info.resolution /2 ) - 10;
 			//calculate position in 1 by ~~~ array
   			arrLoc = (y * 384) + x -10;
   			//check for differences between current and first map
   			diff = first_map->data[arrLoc] - msg->data[arrLoc];
   			if (diff > 50){
 				std::cout << "somethings fishy here" << x <<", " << y << std::endl;
-			}  			
-  			
+			  }  			
   		}
   		  RCLCPP_INFO(nodeh->get_logger(), "Moving on");
-   }
+    }
+  }
+  
 }
+
+void laserCallback(const sensor_msgs::msg::LaserScan msg) {
+  //Convert laserscan data to a occupancy grid
+  x_pos = goal_pos->position.x
+  y_pos = goal_pos->position.y
+  for i, dist in enumerate(msg.ranges):
+    if dist < msg.range_max:
+        x = int((x_pos + dist * math.cos(msg.angle_min + i * msg.angle_increment)) / current_map.info.resolution)
+        y = int((y_pos + dist * math.sin(msg.angle_min + i * msg.angle_increment)) / current_map.info.resolution)
+        if x >= 0 and x < current_map.info.width and y >= 0 and y < current_map.info.height:
+            current_map.data[y * current_map.info.width + x] = 100
+  mappub->publish(current_map);
+}
+
+//def mapping(x_pos_t , y_pos_t, theta, scan_msg, map_msg):
+// convert laser scans to occupancy grid
+//for i, dist in enumerate(scan_msg.ranges):
+//    if dist < scan_msg.range_max:
+//        x = int((x_pos_t + dist * math.cos(scan_msg.angle_min + i * scan_msg.angle_increment)) / map_msg.info.resolution)
+//        y = int((y_pos_t + dist * math.sin(scan_msg.angle_min + i * scan_msg.angle_increment)) / map_msg.info.resolution)
+//        if x >= 0 and xr < map_msg.info.width and y >= 0 and y < map_msg.info.height:
+//            map_msg.data[y * map_msg.info.width + x] = 100
+//return map_msg
 
 
 int main(int argc,char **argv) {
@@ -47,17 +74,21 @@ int main(int argc,char **argv) {
   Navigator navigator(true,false); // create node with debug info but not verbose
   
   // Create instance of a node
-  nodeh = rclcpp::Node::make_shared("mapVals");
+  mapNode = rclcpp::Node::make_shared("mapnode");
+  laserNode = rclcpp::Node::make_shared("lasernode");
   
   // Subscribe to the laser data
-  rclcpp::Subscription<nav_msgs::msg::OccupancyGrid>::SharedPtr laser_sub;
+  rclcpp::Subscription<sensor_msgs::msg::LaserScan>::SharedPtr laser_sub;
+  auto lasersub = laserNode->create_subscription<sensor_msgs::msg::LaserScan>("scan", 10, &laserCallback);
+  mappub = laserNode->create_publisher<nav_msgs::msg::OccupancyGrid>("laserVals", 10)
   	
   // subscribe to topic "stringm" an register the callback function
-  laser_sub = nodeh->create_subscription<nav_msgs::msg::OccupancyGrid>
-                                        ("mapVals",10,&callback);
+  //laser_sub = nodeh->create_subscription<nav_msgs::msg::OccupancyGrid>
+  //                                      ("mapVals",10,&callback);
                                         
    //subscriber to MAP
-   auto sub = nodeh->create_subscription<nav_msgs::msg::OccupancyGrid>("global_costmap", 10, &mapCallback);
+   auto mapsub = mapNode->create_subscription<nav_msgs::msg::OccupancyGrid>("global_costmap", 10, &mapCallback);
+   auto map = mapNode->create_subscription<nav_msgs::msg::OccupancyGrid>("laserVals", 10, &mapCallback);
 
   // first: it is mandatory to initialize the pose of the robot
   geometry_msgs::msg::Pose::SharedPtr init = std::make_shared<geometry_msgs::msg::Pose>();
@@ -72,6 +103,11 @@ int main(int argc,char **argv) {
   while ( ! navigator.IsTaskComplete() ) {
     // busy waiting for task to be completed
   }
+
+  //initialize map
+  rclcpp::spin_some(mapNode)
+
+
   geometry_msgs::msg::Pose::SharedPtr goal_pos = std::make_shared<geometry_msgs::msg::Pose>();
   
   float arr_loc_x[] = {-1, 0, 1, 1.5, 1.5, 1.5, 1, 0, -1, -2};
@@ -94,8 +130,10 @@ int main(int argc,char **argv) {
   	arr_index++;
   	
   	RCLCPP_INFO(nodeh->get_logger(), "Spinning");
-    // wait for messages and process them                
-    //rclcpp::spin(nodeh); 
+    
+    //After reaching new location spin laserNode to process scan data to map then spin mapNode to compare current map to first initialized
+    rclcpp::spin_some(laserNode)
+    rclcpp::spin_some(mapNode)
     
   	while ( ! navigator.IsTaskComplete() ) {}
   	RCLCPP_INFO(nodeh->get_logger(), "First Iteration Done");
@@ -120,10 +158,12 @@ int main(int argc,char **argv) {
   	
   	// Increment arr_index
   	arr_index++;
+
+    //After reaching new location spin laserNode to process scan data to map then spin mapNode to compare current map to first initialized
+    rclcpp::spin_some(laserNode)
+    rclcpp::spin_some(mapNode)
   	
   	
-  	// backup of 0.15 m (deafult distance)
-  	navigator.Backup();
   	while ( ! navigator.IsTaskComplete() ) {}
    }
    
