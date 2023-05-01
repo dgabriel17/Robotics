@@ -16,8 +16,8 @@ void callback(const nav_msgs::msg::OccupancyGrid::SharedPtr msg) {
   }
   else{
     std::vector<int> indices;
-    for(unsigned int i; msg->data.size(); i++){
-      if((first_map->data[i] != msg->data[i]) && (first_map->data[i] - msg->data[i] > 50)){
+    for(unsigned int i = 0; msg->data.size(); i++){
+      if((first_map->data[i] != msg->data[i])){
         indices.push_back(i);
       }
     }
@@ -89,7 +89,9 @@ int main(int argc,char **argv) {
   	goal_pos->orientation.w = 1;
   	// move to new pose
   	navigator.GoToPose(goal_pos);
-  	while ( ! navigator.IsTaskComplete() ) {}
+  	while ( ! navigator.IsTaskComplete() ) {
+
+    }
   	
   	// Increment arr_index
   	arr_index++;
