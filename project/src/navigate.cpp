@@ -6,24 +6,18 @@ rclcpp::Node::SharedPtr nodeh;
 bool first = true;
 nav_msgs::msg::OccupancyGrid::SharedPtr first_map;
 
-// Callback function 
+
+// Callback function for map
 void callback(const nav_msgs::msg::OccupancyGrid::SharedPtr msg) {
-	RCLCPP_INFO(nodeh->get_logger(), "In first Callback function----------------");
-   //print received string to the screen
-   if (first){ //if first time get original map
+  // loop through the map.......................
+  if (first){ //if first time get original map
 	   first_map = msg;
 	   first = false;
    }
-
-  RCLCPP_INFO(nodeh->get_logger(),"Map Data: %s",msg->data);
-}
-
-// Callback function for map
-void mapCallback(const nav_msgs::msg::OccupancyGrid::SharedPtr msg) {
-  // loop through the map.......................
-  int x,y,diff, arrLoc;
-  RCLCPP_INFO(nodeh->get_logger(), "Looking Around ---------------------------");
-  for (unsigned int w = 0; w < msg->info.height; ++w){
+  else{
+    int x,y,diff, arrLoc;
+    RCLCPP_INFO(nodeh->get_logger(), "Looking Around ---------------------------");
+    for (unsigned int w = 0; w < msg->info.height; ++w){
   		for (unsigned int h=0; h < msg->info.height; h++){
   			// find x/y for the big map
   			x = (w* msg->info.resolution)+ (msg->info.resolution /2) - 10 ;
@@ -38,7 +32,9 @@ void mapCallback(const nav_msgs::msg::OccupancyGrid::SharedPtr msg) {
   			
   		}
   		  RCLCPP_INFO(nodeh->get_logger(), "Moving on");
-   }
+    }
+  }
+  
 }
 
 
@@ -49,16 +45,13 @@ int main(int argc,char **argv) {
   
   // Create instance of a node
   nodeh = rclcpp::Node::make_shared("navigate");
-  
-  // Subscribe to the laser data
-  rclcpp::Subscription<nav_msgs::msg::OccupancyGrid>::SharedPtr laser_sub;
-  	
-  // subscribe to topic "mapVals" an register the callback function
-  laser_sub = nodeh->create_subscription<nav_msgs::msg::OccupancyGrid>
-                                        ("global_costmap/costmap",1000,&callback);
-                                        
+                                   
    //subscriber to MAP
-   auto sub = nodeh->create_subscription<nav_msgs::msg::OccupancyGrid>("global_costmap/costmap", 1000, &mapCallback);
+   auto firstmap = nodeh->create_subscription<nav_msgs::msg::OccupancyGrid>("map", 1, &callback);
+
+   rclcpp::spin_some(nodeh);
+
+   auto sub = nodeh->create_subscription<nav_msgs::msg::OccupancyGrid>("global_costmap/costmap", 1, &callback);
 
   // first: it is mandatory to initialize the pose of the robot
   geometry_msgs::msg::Pose::SharedPtr init = std::make_shared<geometry_msgs::msg::Pose>();
@@ -123,16 +116,14 @@ int main(int argc,char **argv) {
   	
   	// Increment arr_index
   	arr_index++;
+
+    rclcpp::spin_some(nodeh);
   	
   	while ( ! navigator.IsTaskComplete() )  {
-  		rclcpp::spin_some(nodeh);
   	}
   	
    }
-   
 
-
-  rclcpp::spin_some(nodeh); 
   //MRTP CH7 has the laser scan info
   // Use Global cost map, it will show abnormalities on the map
   // Type is mav_msgs/msg/Ocupancy grid
