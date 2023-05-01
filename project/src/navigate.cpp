@@ -13,28 +13,34 @@ void callback(const nav_msgs::msg::OccupancyGrid::SharedPtr msg) {
   if (first){ //if first time get original map
 	   first_map = msg;
 	   first = false;
-   }
+  }
   else{
-    int x,y,diff, arrLoc;
+    std::vector<int> indices;
+    for(unsigned int i; msg->data.size(); i++){
+      if((first_map->data[i] != msg->data[i]) && (first_map->data[i] - msg->data[i] > 50)){
+        indices.push_back(i);
+      }
+    }
+
+    int x,y, arrLoc;
     RCLCPP_INFO(nodeh->get_logger(), "Looking Around ---------------------------");
     for (unsigned int w = 0; w < msg->info.height; ++w){
-  		for (unsigned int h=0; h < msg->info.height; h++){
+  		for (unsigned int h = 0; h < msg->info.height; ++h){
   			// find x/y for the big map
-  			x = (w* msg->info.resolution)+ (msg->info.resolution /2) - 10 ;
-  			y = (h* msg->info.resolution) + ( msg->info.resolution /2 ) - 10;
-			//calculate position in 1 by ~~~ array
-  			arrLoc = (y * 384) + x -10;
-  			//check for differences between current and first map
-  			diff = first_map->data[arrLoc] - msg->data[arrLoc];
-  			if (diff > 50){
-				std::cout << "somethings fishy here" << x <<", " << y << std::endl;
-			}  			
-  			
-  		}
-  		  RCLCPP_INFO(nodeh->get_logger(), "Moving on");
-    }
+  			x = (w* msg->info.resolution)+(msg->info.resolution/2) - 10;
+  			y = (h* msg->info.resolution)+(msg->info.resolution/2) - 10;
+
+        arrLoc = (h * 384) + w;
+
+        for(unsigned int i = 0; i < indices.size(); i++){
+          if(arrLoc == indices[i]){
+            RCLCPP_INFO(nodeh->get_logger(), "Something fishy here %d, %d", (x, y));
+          }
+        }
+			}  				
+  	}
+  		RCLCPP_INFO(nodeh->get_logger(), "Moving on");
   }
-  
 }
 
 
@@ -47,11 +53,12 @@ int main(int argc,char **argv) {
   nodeh = rclcpp::Node::make_shared("navigate");
                                    
    //subscriber to MAP
-   auto firstmap = nodeh->create_subscription<nav_msgs::msg::OccupancyGrid>("map", 1, &callback);
+   //auto firstmap = nodeh->create_subscription<nav_msgs::msg::OccupancyGrid>("map", 1, &callback);
 
-   rclcpp::spin_some(nodeh);
+   
 
    auto sub = nodeh->create_subscription<nav_msgs::msg::OccupancyGrid>("global_costmap/costmap", 1, &callback);
+   rclcpp::spin_some(nodeh);
 
   // first: it is mandatory to initialize the pose of the robot
   geometry_msgs::msg::Pose::SharedPtr init = std::make_shared<geometry_msgs::msg::Pose>();
